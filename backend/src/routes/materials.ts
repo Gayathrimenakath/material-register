@@ -4,6 +4,7 @@ import { Router } from "express";
 import { db } from "../db/index.js";
 import { materials, plants } from "../db/schema.js";
 import { materialsQuerySchema, type SORTABLE_COLUMNS } from "../schemas/materials.js";
+import { escapeLike } from "../utils/escapeLike.js";
 
 const router = Router();
 
@@ -19,12 +20,6 @@ const sortColumns: Record<(typeof SORTABLE_COLUMNS)[number], PgColumn> = {
   stockQuantity: materials.stockQuantity,
   updatedAt: materials.updatedAt,
 };
-
-// In LIKE patterns, % and _ are wildcards. Escape them (and the escape character
-// itself, backslash) so a search for "50%" matches the literal text.
-function escapeLike(value: string) {
-  return value.replace(/[\\%_]/g, "\\$&");
-}
 
 router.get("/", async (req, res) => {
   // A ZodError is thrown on bad input and becomes a 400 in errorHandler.

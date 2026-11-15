@@ -38,6 +38,7 @@ Other commands:
 | Command | What it does |
 |---|---|
 | `npm run typecheck` (backend) | Run TypeScript checks without emitting files |
+| `npm test` (backend) | Run the unit tests (no database needed) |
 | `npm run db:generate` (backend) | Generate a SQL migration from `src/db/schema.ts` |
 | `npm run db:studio` (backend) | Open Drizzle Studio to browse the data |
 | `npm run build` (frontend) | Typecheck and bundle the frontend |
@@ -181,6 +182,17 @@ These include the join to `plants`, ordering with an `id` tiebreaker and a page 
 
 - **Indexing decision:** I added no further indexes. At the current dataset size, measured query times were acceptable. Additional indexes would add storage and write overhead without a demonstrated need. Search performance can be revisited if the dataset grows significantly.
 
+## Tests
+
+Run `npm test --prefix backend`. The suite has 10 small unit tests, using Node's built-in test runner through `tsx`, so there are no extra dependencies. They cover query-parameter validation (defaults, string-to-number conversion, the `pageSize` cap, allowed type and status values, the sort-column whitelist and search trimming) and the escaping of `%` and `_` in search terms. They don't need the database or Docker.
+
+There are no API-level tests yet.
+
+## Next steps
+
+- **Edit route and UI:** add `PATCH /api/materials/:id` with Zod validation of the body and a 404 for unknown ids, plus a detail view in the table for editing a single material.
+- **Tests for editing:** add API-level tests for the edit route (validation errors, unknown ids, `updatedAt` changing). These should run against a separate test database so they cannot change development data. The same setup could then also cover the list endpoint's pagination, filters and sorting.
+
 ## AI-assisted development
 
 I used Claude Code (CLI, Claude Sonnet 5.5) as a development assistant throughout the project. I have experience with React and TypeScript, so I used it primarily to accelerate implementation and explore the backend and database aspects of the stack.
@@ -189,6 +201,7 @@ I used Claude Code (CLI, Claude Sonnet 5.5) as a development assistant throughou
 
 - **Backend and database implementation:** Exploring the Drizzle schema, PostgreSQL relationships, migrations, seed data and Express API implementation.
 - **Implementation and refinement:** Working through the application in small, reviewable milestones.
+- **Tests:** Writing a small set of unit tests for query validation and LIKE escaping, then confirming they fail when the code under test is deliberately broken.
 - **Performance investigation:** Using PostgreSQL `EXPLAIN ANALYZE` to inspect query plans, understand index usage and decide whether additional indexes were justified.
 
 **How I validated its output**

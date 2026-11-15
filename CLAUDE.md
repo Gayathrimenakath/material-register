@@ -16,6 +16,7 @@ Verified against the `package.json` files. If you add or rename a script, update
 - Frontend: `cd frontend && npm run dev`
 - Migrations (in `backend/`): `npm run db:generate` then `npm run db:migrate`; `npm run db:studio` for the browser UI
 - Seed (in `backend/`): `npm run db:seed` (refuses to run if tables are not empty)
+- Tests: `npm test` in `backend/` (or from the repo root). Unit tests only, no database needed. Test files are `src/**/*.test.ts`
 - Typecheck backend: `npm run typecheck` in `backend/`
 - Typecheck frontend: `npx tsc -b` in `frontend/` (plain `tsc --noEmit` checks nothing there, because the root tsconfig only has project references)
 - Frontend build / lint: `npm run build`, `npm run lint` in `frontend/`
