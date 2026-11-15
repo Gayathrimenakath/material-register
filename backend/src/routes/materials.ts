@@ -1,4 +1,4 @@
-import { asc, count, eq, ilike, or } from "drizzle-orm";
+import { and, asc, count, eq, ilike, or } from "drizzle-orm";
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { materials, plants } from "../db/schema.js";
@@ -14,17 +14,23 @@ function escapeLike(value: string) {
 
 router.get("/", async (req, res) => {
   // A ZodError is thrown on bad input and becomes a 400 in errorHandler.
-  const { search, page, pageSize } = materialsQuerySchema.parse(req.query);
+  const { search, type, status, plantId, page, pageSize } = materialsQuerySchema.parse(req.query);
 
   // Case-insensitive "contains" match on the three searchable columns.
   const pattern = search ? `%${escapeLike(search)}%` : undefined;
-  const where = pattern
-    ? or(
-        ilike(materials.materialNumber, pattern),
-        ilike(materials.description, pattern),
-        ilike(materials.manufacturerPartNumber, pattern),
-      )
-    : undefined;
+  // and() skips undefined entries, so unused search/filters simply drop out.
+  const where = and(
+    pattern
+      ? or(
+          ilike(materials.materialNumber, pattern),
+          ilike(materials.description, pattern),
+          ilike(materials.manufacturerPartNumber, pattern),
+        )
+      : undefined,
+    type ? eq(materials.type, type) : undefined,
+    status ? eq(materials.status, status) : undefined,
+    plantId ? eq(materials.plantId, plantId) : undefined,
+  );
 
   const [rows, [{ total }]] = await Promise.all([
     db

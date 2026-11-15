@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import materialsRouter from "./routes/materials.js";
+import plantsRouter from "./routes/plants.js";
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/materials", materialsRouter);
+app.use("/api/plants", plantsRouter);
 
 // Order matters: 404 handler after all routes, error handler last.
 app.use(notFoundHandler);

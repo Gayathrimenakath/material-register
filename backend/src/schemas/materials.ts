@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { materialStatusEnum, materialTypeEnum } from "../db/schema.js";
 
 export const MAX_PAGE_SIZE = 100;
 
@@ -10,6 +11,9 @@ export const materialsQuerySchema = z.object({
     .max(100)
     .optional()
     .transform((value) => value || undefined), // "" -> undefined (no search)
+  type: z.enum(materialTypeEnum.enumValues).optional(),
+  status: z.enum(materialStatusEnum.enumValues).optional(),
+  plantId: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(25),
 });

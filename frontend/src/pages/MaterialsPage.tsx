@@ -1,8 +1,11 @@
 import { Alert, Box, Button, Container, Group, LoadingOverlay, Pagination, Stack, Text, Title } from '@mantine/core'
 import { useSearchParams } from 'react-router'
+import MaterialsFilters, { type FilterName } from '../components/materials/MaterialsFilters.tsx'
 import MaterialsSearch from '../components/materials/MaterialsSearch.tsx'
 import MaterialsTable from '../components/materials/MaterialsTable.tsx'
+import { MATERIAL_STATUSES, MATERIAL_TYPES } from '../api/materials.ts'
 import { useMaterials } from '../hooks/useMaterials.ts'
+import { usePlants } from '../hooks/usePlants.ts'
 
 const PAGE_SIZE = 25
 
@@ -12,11 +15,33 @@ function parsePage(value: string | null) {
   return Math.max(1, Number(value))
 }
 
+// Returns the URL value only if it is one of the allowed options, else undefined.
+function parseOption<T extends string>(value: string | null, options: readonly T[]) {
+  return options.find((option) => option === value)
+}
+
+function parsePlantId(value: string | null) {
+  return value && /^\d+$/.test(value) && Number(value) > 0 ? Number(value) : undefined
+}
+
 export default function MaterialsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parsePage(searchParams.get('page'))
   const search = searchParams.get('search') ?? ''
-  const { data, loading, error, retry } = useMaterials({ page, pageSize: PAGE_SIZE, search })
+  const type = parseOption(searchParams.get('type'), MATERIAL_TYPES)
+  const status = parseOption(searchParams.get('status'), MATERIAL_STATUSES)
+  const plantId = parsePlantId(searchParams.get('plantId'))
+  const hasActiveFilters = Boolean(search || type || status || plantId)
+
+  const { data, loading, error, retry } = useMaterials({
+    page,
+    pageSize: PAGE_SIZE,
+    search,
+    type,
+    status,
+    plantId,
+  })
+  const { plants, failed: plantsFailed } = usePlants()
 
   const setPage = (newPage: number) =>
     setSearchParams((previous) => {
@@ -26,15 +51,20 @@ export default function MaterialsPage() {
       return next
     })
 
-  // Changing the search always goes back to page 1.
-  const setSearch = (value: string) =>
+  // Sets or removes URL params. Any change to search or filters goes back to page 1.
+  const setParams = (updates: Record<string, string | undefined>) =>
     setSearchParams((previous) => {
       const next = new URLSearchParams(previous)
-      if (value) next.set('search', value)
-      else next.delete('search')
+      for (const [key, value] of Object.entries(updates)) {
+        if (value) next.set(key, value)
+        else next.delete(key)
+      }
       next.delete('page')
       return next
     })
+
+  const clearAll = () =>
+    setParams({ search: undefined, type: undefined, status: undefined, plantId: undefined })
 
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -48,7 +78,17 @@ export default function MaterialsPage() {
       <Stack gap="md">
         <Title order={2}>Material Register</Title>
 
-        <MaterialsSearch value={search} onChange={setSearch} />
+        <MaterialsSearch value={search} onChange={(value) => setParams({ search: value })} />
+        <MaterialsFilters
+          type={type}
+          status={status}
+          plantId={plantId}
+          plants={plants}
+          plantsFailed={plantsFailed}
+          canClear={hasActiveFilters}
+          onChange={(name: FilterName, value) => setParams({ [name]: value ?? undefined })}
+          onClear={clearAll}
+        />
 
         {error && (
           <Alert color="red" title="Could not load materials">
@@ -71,8 +111,8 @@ export default function MaterialsPage() {
               <Text fw={500}>
                 {total > 0
                   ? 'This page is out of range'
-                  : search
-                    ? `No materials match "${search}"`
+                  : hasActiveFilters
+                    ? 'No materials match the current search or filters'
                     : 'No materials found'}
               </Text>
               {total > 0 && (
@@ -80,9 +120,9 @@ export default function MaterialsPage() {
                   Go to first page
                 </Button>
               )}
-              {total === 0 && search && (
-                <Button variant="light" onClick={() => setSearch('')}>
-                  Clear search
+              {total === 0 && hasActiveFilters && (
+                <Button variant="light" onClick={clearAll}>
+                  Clear all
                 </Button>
               )}
             </Stack>
