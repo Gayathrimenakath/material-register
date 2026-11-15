@@ -1,8 +1,10 @@
 import { Badge } from '@mantine/core'
-import { createColumnHelper, tableFeatures } from '@tanstack/react-table'
+import { createColumnHelper, rowSortingFeature, tableFeatures } from '@tanstack/react-table'
 import type { Material } from '../../api/materials.ts'
 
-export const features = tableFeatures({})
+// Only the features we use are registered. Sorting is done by the database
+// (manualSorting), so no sorted row model is needed.
+export const features = tableFeatures({ rowSortingFeature })
 
 const columnHelper = createColumnHelper<typeof features, Material>()
 
@@ -33,13 +35,14 @@ export const materialColumns = columnHelper.columns([
   }),
   columnHelper.accessor('manufacturerPartNumber', {
     header: 'MPN',
+    enableSorting: false, // the API doesn't sort by MPN or unit of measure
     cell: (info) => info.getValue() ?? '—',
   }),
   columnHelper.accessor((row) => `${row.plant.code} · ${row.plant.name}`, {
     id: 'plant',
     header: 'Plant',
   }),
-  columnHelper.accessor('unitOfMeasure', { header: 'UoM' }),
+  columnHelper.accessor('unitOfMeasure', { header: 'UoM', enableSorting: false }),
   columnHelper.accessor('unitPrice', {
     header: 'Unit price',
     cell: (info) => priceFormat.format(info.getValue()),

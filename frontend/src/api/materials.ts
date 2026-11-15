@@ -3,6 +3,29 @@
 export const MATERIAL_TYPES = ['Spare Part', 'Consumable', 'Raw Material', 'Tool'] as const
 export const MATERIAL_STATUSES = ['Active', 'Obsolete', 'Pending Review'] as const
 
+// Keep in sync with SORTABLE_COLUMNS in backend/src/schemas/materials.ts.
+export const SORTABLE_COLUMNS = [
+  'materialNumber',
+  'description',
+  'type',
+  'status',
+  'manufacturer',
+  'plant',
+  'unitPrice',
+  'stockQuantity',
+  'updatedAt',
+] as const
+export const SORT_ORDERS = ['asc', 'desc'] as const
+
+export type SortableColumn = (typeof SORTABLE_COLUMNS)[number]
+export type SortOrder = (typeof SORT_ORDERS)[number]
+
+// What the API uses when no sort is given. The URL leaves these out.
+export const DEFAULT_SORT: { sortBy: SortableColumn; sortOrder: SortOrder } = {
+  sortBy: 'materialNumber',
+  sortOrder: 'asc',
+}
+
 export type MaterialType = (typeof MATERIAL_TYPES)[number]
 export type MaterialStatus = (typeof MATERIAL_STATUSES)[number]
 
@@ -36,6 +59,8 @@ export type MaterialsParams = {
   type?: MaterialType
   status?: MaterialStatus
   plantId?: number
+  sortBy?: SortableColumn
+  sortOrder?: SortOrder
 }
 
 export async function fetchMaterials(
@@ -50,6 +75,8 @@ export async function fetchMaterials(
   if (params.type) query.set('type', params.type)
   if (params.status) query.set('status', params.status)
   if (params.plantId) query.set('plantId', String(params.plantId))
+  if (params.sortBy) query.set('sortBy', params.sortBy)
+  if (params.sortOrder) query.set('sortOrder', params.sortOrder)
   const response = await fetch(`/api/materials?${query}`, { signal })
 
   if (!response.ok) {

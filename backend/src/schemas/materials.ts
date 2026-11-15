@@ -3,6 +3,19 @@ import { materialStatusEnum, materialTypeEnum } from "../db/schema.js";
 
 export const MAX_PAGE_SIZE = 100;
 
+// The only values sortBy accepts. The route maps each one to a real column.
+export const SORTABLE_COLUMNS = [
+  "materialNumber",
+  "description",
+  "type",
+  "status",
+  "manufacturer",
+  "plant",
+  "unitPrice",
+  "stockQuantity",
+  "updatedAt",
+] as const;
+
 // Query-string values always arrive as strings, so numbers use z.coerce.
 export const materialsQuerySchema = z.object({
   search: z
@@ -14,6 +27,8 @@ export const materialsQuerySchema = z.object({
   type: z.enum(materialTypeEnum.enumValues).optional(),
   status: z.enum(materialStatusEnum.enumValues).optional(),
   plantId: z.coerce.number().int().positive().optional(),
+  sortBy: z.enum(SORTABLE_COLUMNS).default("materialNumber"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(25),
 });

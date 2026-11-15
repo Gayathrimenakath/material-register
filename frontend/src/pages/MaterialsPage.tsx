@@ -3,7 +3,15 @@ import { useSearchParams } from 'react-router'
 import MaterialsFilters, { type FilterName } from '../components/materials/MaterialsFilters.tsx'
 import MaterialsSearch from '../components/materials/MaterialsSearch.tsx'
 import MaterialsTable from '../components/materials/MaterialsTable.tsx'
-import { MATERIAL_STATUSES, MATERIAL_TYPES } from '../api/materials.ts'
+import {
+  DEFAULT_SORT,
+  MATERIAL_STATUSES,
+  MATERIAL_TYPES,
+  SORT_ORDERS,
+  SORTABLE_COLUMNS,
+  type SortableColumn,
+  type SortOrder,
+} from '../api/materials.ts'
 import { useMaterials } from '../hooks/useMaterials.ts'
 import { usePlants } from '../hooks/usePlants.ts'
 
@@ -31,7 +39,9 @@ export default function MaterialsPage() {
   const type = parseOption(searchParams.get('type'), MATERIAL_TYPES)
   const status = parseOption(searchParams.get('status'), MATERIAL_STATUSES)
   const plantId = parsePlantId(searchParams.get('plantId'))
-  const hasActiveFilters = Boolean(search || type || status || plantId)
+  const sortBy = parseOption(searchParams.get('sortBy'), SORTABLE_COLUMNS) ?? DEFAULT_SORT.sortBy
+  const sortOrder = parseOption(searchParams.get('sortOrder'), SORT_ORDERS) ?? DEFAULT_SORT.sortOrder
+  const hasActiveFilters = Boolean(search || type || status || plantId) // sorting is not a filter
 
   const { data, loading, error, retry } = useMaterials({
     page,
@@ -40,6 +50,8 @@ export default function MaterialsPage() {
     type,
     status,
     plantId,
+    sortBy,
+    sortOrder,
   })
   const { plants, failed: plantsFailed } = usePlants()
 
@@ -61,6 +73,13 @@ export default function MaterialsPage() {
       }
       next.delete('page')
       return next
+    })
+
+  // Values equal to the default are left out of the URL to keep it clean.
+  const setSort = (newSortBy: SortableColumn, newSortOrder: SortOrder) =>
+    setParams({
+      sortBy: newSortBy === DEFAULT_SORT.sortBy ? undefined : newSortBy,
+      sortOrder: newSortOrder === DEFAULT_SORT.sortOrder ? undefined : newSortOrder,
     })
 
   const clearAll = () =>
@@ -104,7 +123,14 @@ export default function MaterialsPage() {
         <Box pos="relative" mih={200}>
           <LoadingOverlay visible={loading} zIndex={10} overlayProps={{ blur: 1 }} />
 
-          {data && !error && data.items.length > 0 && <MaterialsTable items={data.items} />}
+          {data && !error && data.items.length > 0 && (
+            <MaterialsTable
+              items={data.items}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSortChange={setSort}
+            />
+          )}
 
           {data && !error && data.items.length === 0 && (
             <Stack align="center" py="xl" gap="xs">

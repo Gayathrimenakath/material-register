@@ -1,10 +1,24 @@
-import { and, asc, count, eq, ilike, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { materials, plants } from "../db/schema.js";
-import { materialsQuerySchema } from "../schemas/materials.js";
+import { materialsQuerySchema, type SORTABLE_COLUMNS } from "../schemas/materials.js";
 
 const router = Router();
+
+// Maps each whitelisted sortBy value to a real column (no SQL built from strings).
+const sortColumns: Record<(typeof SORTABLE_COLUMNS)[number], PgColumn> = {
+  materialNumber: materials.materialNumber,
+  description: materials.description,
+  type: materials.type,
+  status: materials.status,
+  manufacturer: materials.manufacturer,
+  plant: plants.code,
+  unitPrice: materials.unitPrice,
+  stockQuantity: materials.stockQuantity,
+  updatedAt: materials.updatedAt,
+};
 
 // In LIKE patterns, % and _ are wildcards. Escape them (and the escape character
 // itself, backslash) so a search for "50%" matches the literal text.
@@ -14,7 +28,8 @@ function escapeLike(value: string) {
 
 router.get("/", async (req, res) => {
   // A ZodError is thrown on bad input and becomes a 400 in errorHandler.
-  const { search, type, status, plantId, page, pageSize } = materialsQuerySchema.parse(req.query);
+  const { search, type, status, plantId, sortBy, sortOrder, page, pageSize } =
+    materialsQuerySchema.parse(req.query);
 
   // Case-insensitive "contains" match on the three searchable columns.
   const pattern = search ? `%${escapeLike(search)}%` : undefined;
@@ -52,7 +67,9 @@ router.get("/", async (req, res) => {
       .from(materials)
       .innerJoin(plants, eq(materials.plantId, plants.id))
       .where(where)
-      .orderBy(asc(materials.id))
+      // id is the tiebreaker: without it, rows with equal sort values (say, the
+      // same type) could swap places between pages.
+      .orderBy((sortOrder === "asc" ? asc : desc)(sortColumns[sortBy]), asc(materials.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize),
     db.select({ total: count() }).from(materials).where(where),

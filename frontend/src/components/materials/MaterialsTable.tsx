@@ -1,10 +1,38 @@
-import { Table } from '@mantine/core'
+import { Group, Table, Text, UnstyledButton } from '@mantine/core'
 import { useTable } from '@tanstack/react-table'
-import type { Material } from '../../api/materials.ts'
+import { useMemo } from 'react'
+import { SORTABLE_COLUMNS, type Material, type SortableColumn, type SortOrder } from '../../api/materials.ts'
 import { features, materialColumns } from './materialColumns.tsx'
 
-export default function MaterialsTable({ items }: { items: Material[] }) {
-  const table = useTable({ features, columns: materialColumns, data: items }, (state) => state)
+type Props = {
+  items: Material[]
+  sortBy: SortableColumn
+  sortOrder: SortOrder
+  onSortChange: (sortBy: SortableColumn, sortOrder: SortOrder) => void
+}
+
+export default function MaterialsTable({ items, sortBy, sortOrder, onSortChange }: Props) {
+  // Memoized so the table sees a new array only when the sort really changes.
+  const sorting = useMemo(() => [{ id: sortBy, desc: sortOrder === 'desc' }], [sortBy, sortOrder])
+
+  const table = useTable(
+    {
+      features,
+      columns: materialColumns,
+      data: items,
+      manualSorting: true, // the database sorts, not the table
+      enableSortingRemoval: false, // there is always a sort (the default one)
+      enableMultiSort: false,
+      sortDescFirst: false, // first click is always ascending, even for numbers
+      state: { sorting },
+      onSortingChange: (updater) => {
+        const next = (typeof updater === 'function' ? updater(sorting) : updater)[0]
+        const column = SORTABLE_COLUMNS.find((id) => id === next?.id)
+        if (column) onSortChange(column, next.desc ? 'desc' : 'asc')
+      },
+    },
+    (state) => state,
+  )
 
   return (
     <Table.ScrollContainer minWidth={1000}>
@@ -12,11 +40,34 @@ export default function MaterialsTable({ items }: { items: Material[] }) {
         <Table.Thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <Table.Tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <Table.Th key={header.id}>
-                  {header.isPlaceholder ? null : <table.FlexRender header={header} />}
-                </Table.Th>
-              ))}
+              {headerGroup.headers.map((header) => {
+                const sorted = header.column.getIsSorted()
+                return (
+                  <Table.Th
+                    key={header.id}
+                    aria-sort={
+                      sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : undefined
+                    }
+                  >
+                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                      <UnstyledButton
+                        onClick={header.column.getToggleSortingHandler()}
+                        fw="inherit"
+                        fz="inherit"
+                      >
+                        <Group gap={4} wrap="nowrap">
+                          <table.FlexRender header={header} />
+                          <Text span size="xs" c={sorted ? undefined : 'dimmed'}>
+                            {sorted === 'asc' ? '▲' : sorted === 'desc' ? '▼' : '↕'}
+                          </Text>
+                        </Group>
+                      </UnstyledButton>
+                    ) : (
+                      <table.FlexRender header={header} />
+                    )}
+                  </Table.Th>
+                )
+              })}
             </Table.Tr>
           ))}
         </Table.Thead>
