@@ -28,8 +28,12 @@ function parseOption<T extends string>(value: string | null, options: readonly T
   return options.find((option) => option === value)
 }
 
+const POSTGRES_INT_MAX = 2147483647 // same limit as the API's plantId
+
 function parsePlantId(value: string | null) {
-  return value && /^\d+$/.test(value) && Number(value) > 0 ? Number(value) : undefined
+  if (!value || !/^\d+$/.test(value)) return undefined
+  const id = Number(value)
+  return id > 0 && id <= POSTGRES_INT_MAX ? id : undefined
 }
 
 export default function MaterialsPage() {

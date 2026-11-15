@@ -42,6 +42,12 @@ describe("materialsQuerySchema", () => {
     assert.equal(failedField({ plantId: "0" }), "plantId");
   });
 
+  it("rejects a plantId too large for a Postgres integer", () => {
+    assert.equal(materialsQuerySchema.parse({ plantId: "2147483647" }).plantId, 2147483647);
+    assert.equal(failedField({ plantId: "2147483648" }), "plantId");
+    assert.equal(failedField({ plantId: "99999999999" }), "plantId");
+  });
+
   it("only accepts whitelisted sort columns and directions", () => {
     assert.equal(materialsQuerySchema.parse({ sortBy: "unitPrice", sortOrder: "desc" }).sortBy, "unitPrice");
     assert.equal(failedField({ sortBy: "id; drop table materials" }), "sortBy");

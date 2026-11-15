@@ -9,4 +9,11 @@ if (!connectionString) {
 }
 
 export const pool = new Pool({ connectionString });
+
+// Without a listener, an error on an idle connection (for example when
+// Postgres restarts) would crash the whole process.
+pool.on("error", (error) => {
+  console.error("Unexpected database error:", error);
+});
+
 export const db = drizzle(pool, { schema });

@@ -19,7 +19,7 @@ cp backend/.env.example backend/.env
 npm install
 npm run install:all
 
-# 3. Start PostgreSQL
+# 3. Start PostgreSQL in Docker (reachable from your own computer only, not from the network)
 docker compose up -d
 
 # 4. Migrate and seed the database (wait a few seconds after step 3 for
@@ -54,6 +54,8 @@ docker compose down -v
 
 **Warning:** This deletes the PostgreSQL database volume and all data stored in it. Repeat the database and backend setup steps afterwards.
 
+If the backend reports `password authentication failed`, the database volume was created earlier with a different password, because PostgreSQL only sets the password when the volume is first created. Run the same command to recreate it with the password in `backend/.env`.
+
 ## API
 
 ### `GET /api/materials`
@@ -65,7 +67,7 @@ All parameters are optional and validated with a Zod schema. Invalid values retu
 | `search` | Case-insensitive contains match on material number, description and manufacturer part number; max 100 characters | None |
 | `type` | `Spare Part`, `Consumable`, `Raw Material`, `Tool` | None |
 | `status` | `Active`, `Obsolete`, `Pending Review` | None |
-| `plantId` | Plant ID (see `/api/plants`) | None |
+| `plantId` | Plant ID (see `/api/plants`); integer from 1 to 2147483647 | None |
 | `sortBy` | `materialNumber`, `description`, `type`, `status`, `manufacturer`, `plant`, `unitPrice`, `stockQuantity`, `updatedAt` | `materialNumber` |
 | `sortOrder` | `asc`, `desc` | `asc` |
 | `page` | Integer ≥ 1 | `1` |
@@ -184,7 +186,7 @@ These include the join to `plants`, ordering with an `id` tiebreaker and a page 
 
 ## Tests
 
-Run `npm test --prefix backend`. The suite has 10 small unit tests, using Node's built-in test runner through `tsx`, so there are no extra dependencies. They cover query-parameter validation (defaults, string-to-number conversion, the `pageSize` cap, allowed type and status values, the sort-column whitelist and search trimming) and the escaping of `%` and `_` in search terms. They don't need the database or Docker.
+Run `npm test --prefix backend`. The suite has 11 small unit tests, using Node's built-in test runner through `tsx`, so there are no extra dependencies. They cover query-parameter validation (defaults, string-to-number conversion, the `pageSize` cap, allowed type and status values, the `plantId` range, the sort-column whitelist and search trimming) and the escaping of `%` and `_` in search terms. They don't need the database or Docker.
 
 There are no API-level tests yet.
 
