@@ -3,17 +3,17 @@ import { fetchMaterials, type MaterialsParams, type MaterialsResponse } from '..
 
 type Result = { key: string; data: MaterialsResponse | null; error: string | null }
 
-export function useMaterials({ page, pageSize }: MaterialsParams) {
+export function useMaterials({ page, pageSize, search }: MaterialsParams) {
   const [attempt, setAttempt] = useState(0) // bumped by retry() to refetch
   const [result, setResult] = useState<Result>({ key: '', data: null, error: null })
 
   // Identifies the request we want. While `result.key` differs, we are loading.
-  const key = `${page}:${pageSize}:${attempt}`
+  const key = JSON.stringify([page, pageSize, search ?? '', attempt])
 
   useEffect(() => {
     const controller = new AbortController()
 
-    fetchMaterials({ page, pageSize }, controller.signal)
+    fetchMaterials({ page, pageSize, search }, controller.signal)
       .then((data) => setResult({ key, data, error: null }))
       .catch((err: unknown) => {
         if (controller.signal.aborted) return // superseded by a newer request
@@ -24,7 +24,7 @@ export function useMaterials({ page, pageSize }: MaterialsParams) {
     // If the page changes before this response arrives, cancel it so a slow
     // old response can never overwrite a newer one.
     return () => controller.abort()
-  }, [key, page, pageSize])
+  }, [key, page, pageSize, search])
 
   const isCurrent = result.key === key
   return {

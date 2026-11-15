@@ -1,5 +1,6 @@
 import { Alert, Box, Button, Container, Group, LoadingOverlay, Pagination, Stack, Text, Title } from '@mantine/core'
 import { useSearchParams } from 'react-router'
+import MaterialsSearch from '../components/materials/MaterialsSearch.tsx'
 import MaterialsTable from '../components/materials/MaterialsTable.tsx'
 import { useMaterials } from '../hooks/useMaterials.ts'
 
@@ -14,13 +15,24 @@ function parsePage(value: string | null) {
 export default function MaterialsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parsePage(searchParams.get('page'))
-  const { data, loading, error, retry } = useMaterials({ page, pageSize: PAGE_SIZE })
+  const search = searchParams.get('search') ?? ''
+  const { data, loading, error, retry } = useMaterials({ page, pageSize: PAGE_SIZE, search })
 
   const setPage = (newPage: number) =>
     setSearchParams((previous) => {
       const next = new URLSearchParams(previous) // keep any other params
       if (newPage === 1) next.delete('page')
       else next.set('page', String(newPage))
+      return next
+    })
+
+  // Changing the search always goes back to page 1.
+  const setSearch = (value: string) =>
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous)
+      if (value) next.set('search', value)
+      else next.delete('search')
+      next.delete('page')
       return next
     })
 
@@ -35,6 +47,8 @@ export default function MaterialsPage() {
     <Container size="xl" py="lg">
       <Stack gap="md">
         <Title order={2}>Material Register</Title>
+
+        <MaterialsSearch value={search} onChange={setSearch} />
 
         {error && (
           <Alert color="red" title="Could not load materials">
@@ -54,10 +68,21 @@ export default function MaterialsPage() {
 
           {data && !error && data.items.length === 0 && (
             <Stack align="center" py="xl" gap="xs">
-              <Text fw={500}>{total === 0 ? 'No materials found' : 'This page is out of range'}</Text>
+              <Text fw={500}>
+                {total > 0
+                  ? 'This page is out of range'
+                  : search
+                    ? `No materials match "${search}"`
+                    : 'No materials found'}
+              </Text>
               {total > 0 && (
                 <Button variant="light" onClick={() => setPage(1)}>
                   Go to first page
+                </Button>
+              )}
+              {total === 0 && search && (
+                <Button variant="light" onClick={() => setSearch('')}>
+                  Clear search
                 </Button>
               )}
             </Stack>

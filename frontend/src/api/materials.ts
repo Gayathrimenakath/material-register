@@ -24,6 +24,7 @@ export type MaterialsResponse = {
 export type MaterialsParams = {
   page: number
   pageSize: number
+  search?: string
 }
 
 export async function fetchMaterials(
@@ -34,6 +35,7 @@ export async function fetchMaterials(
     page: String(params.page),
     pageSize: String(params.pageSize),
   })
+  if (params.search) query.set('search', params.search)
   const response = await fetch(`/api/materials?${query}`, { signal })
 
   if (!response.ok) {

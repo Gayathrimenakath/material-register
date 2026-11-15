@@ -1,4 +1,4 @@
-import { asc, count, eq } from "drizzle-orm";
+import { asc, count, eq, ilike, or } from "drizzle-orm";
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { materials, plants } from "../db/schema.js";
@@ -6,9 +6,25 @@ import { materialsQuerySchema } from "../schemas/materials.js";
 
 const router = Router();
 
+// In LIKE patterns, % and _ are wildcards. Escape them (and the escape character
+// itself, backslash) so a search for "50%" matches the literal text.
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
 router.get("/", async (req, res) => {
   // A ZodError is thrown on bad input and becomes a 400 in errorHandler.
-  const { page, pageSize } = materialsQuerySchema.parse(req.query);
+  const { search, page, pageSize } = materialsQuerySchema.parse(req.query);
+
+  // Case-insensitive "contains" match on the three searchable columns.
+  const pattern = search ? `%${escapeLike(search)}%` : undefined;
+  const where = pattern
+    ? or(
+        ilike(materials.materialNumber, pattern),
+        ilike(materials.description, pattern),
+        ilike(materials.manufacturerPartNumber, pattern),
+      )
+    : undefined;
 
   const [rows, [{ total }]] = await Promise.all([
     db
@@ -29,10 +45,11 @@ router.get("/", async (req, res) => {
       })
       .from(materials)
       .innerJoin(plants, eq(materials.plantId, plants.id))
+      .where(where)
       .orderBy(asc(materials.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize),
-    db.select({ total: count() }).from(materials),
+    db.select({ total: count() }).from(materials).where(where),
   ]);
 
   res.json({
